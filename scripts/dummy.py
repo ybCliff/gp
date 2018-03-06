@@ -92,7 +92,4 @@ if __name__ == '__main__':
     #     print(now.hour, now.minute)
     #     time.sleep(1)
 
-    a = [1, 2, 3]
-    b = [4, 5, 6]
-    print(np.array(a).reshape(1, 3).shape)
-    print(np.append(np.array(a), np.array(b), axis=1))
+    print( (3**2 + 4**2)**0.5  )

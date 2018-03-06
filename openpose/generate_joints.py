@@ -10,8 +10,9 @@ import os
 # os.environ["CUDA_VISIBLE_DEVICES"] = '-1'
 from tensorflow.python.client import timeline
 
-from openpose.common import estimate_pose, preprocess, get_best_joints
-from openpose.networks import get_network
+from common import estimate_pose, CocoPairsRender, preprocess, CocoColors, get_joints, draw_humans
+from networks import get_network
+from pose_dataset import CocoPoseLMDB
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 
@@ -33,13 +34,39 @@ parser.add_argument('--model', type=str, default='cmu',
                     help='cmu / mobilenet / mobilenet_accurate / mobilenet_fast')
 args = parser.parse_args()
 
-source_folder = "D:/graduation_project/workspace/dataset/HMDB51/video/"
-save_joints_path = "D:/graduation_project/workspace/dataset/HMDB51/ori/"
+source_folder = "D:/graduation_project/workspace/dataset/HMDB51_train_test_splits/test1/"
+save_joints_path = "D:/graduation_project/workspace/dataset/HMDB51_train_test_splits/test1_joints/ori/"
+
+Dict = {'HMDB51':{'train1':3570, 'train2':3570, 'train3':3570, 'test1':3196, 'test2':3196, 'test3':3196},
+        'UCF101':{'train1':9537, 'train2':9586, 'train3':9624, 'test1':3783, 'test2':3734, 'test3':3696}}
+file_finally_num = Dict[args.dataset][args.scope]
 
 if not os.path.exists(save_joints_path):
     os.makedirs(save_joints_path)
+else:
+    tlen = len(os.listdir(save_joints_path))
+    if args.start == 0:
+        args.start = max([0, tlen-1])
 
-def run(image, pre_centers):
+def display(image, humans, heatMat, pafMat):
+    print("hahha")
+    image_h, image_w = image.shape[:2]
+    image = draw_humans(image, humans)
+
+    scale = 480.0 / image_h
+    newh, neww = 480, int(scale * image_w + 0.5)
+
+    process_img = CocoPoseLMDB.display_image(image, heatMat, pafMat, as_numpy=True)
+    image = cv2.resize(image, (neww, newh), interpolation=cv2.INTER_AREA)
+
+    convas = np.zeros([480, 640 + neww, 3], dtype=np.uint8)
+    convas[:, :640] = process_img
+    convas[:, 640:] = image
+
+    cv2.imshow('result', convas)
+    cv2.waitKey(0)
+
+def run(image, show=False, trg_len=0):
     pafMat, heatMat = sess.run(
         [
             net.get_output(name=last_layer.format(stage=args.stage_level, aux=1)),
@@ -50,24 +77,18 @@ def run(image, pre_centers):
 
     humans = estimate_pose(heatMat, pafMat)
 
-    joints, cover = get_best_joints(image, humans, pre_centers)
-
-    return joints, cover
-
-#omit[i] = type - 1
-omit = [1, 3, 8, 10,
-        11, 12, 14, 19,
-        24, 27,
-        32, 36, 38,
-        40, 41, 42, 43, 47, 48, 49, 50]
+    joints = get_joints(image, humans)
+    if show and len(joints) == trg_len:
+        display(image, humans, heatMat, pafMat)
+    return joints
 
 if __name__ == '__main__':
-    # while True:
-    #     current_time = time.localtime(time.time())
-    #     # print(current_time)
-    #     if (current_time.tm_hour >= 2) and (current_time.tm_min >= 45):
-    #         break
-    #     time.sleep(10)
+    while True:
+        current_time = time.localtime(time.time())
+        # print(current_time)
+        if (current_time.tm_hour >= 2) and (current_time.tm_min >= 45):
+            break
+        time.sleep(10)
 
     file_list = os.listdir(source_folder)
 
@@ -84,9 +105,6 @@ if __name__ == '__main__':
             index += 1
             if index < begin:
                 continue
-            type = int(file.split('.')[0].split('_')[1]) - 1
-            if type in omit:
-                continue
             round_time = time.time()
 
             save_file_name = file.split('.')[0] + '.txt'
@@ -99,7 +117,6 @@ if __name__ == '__main__':
 
             record_count = [0] * 19
             record_sort = []
-            pre_centers = {}
             body = ""
             rval = True
             while rval:  # 循环读取视频帧
@@ -107,9 +124,7 @@ if __name__ == '__main__':
                 joints = []
                 if frame is not None:
                     image = preprocess(frame, args.input_width, args.input_height)
-                    joints, cover = run(image, pre_centers)
-                    if cover:
-                        pre_centers = joints
+                    joints = run(image, show=False, trg_len=15)
                     # print(len(joints), joints)
                     for key in sorted(joints.keys()):
                         value = joints[key]
