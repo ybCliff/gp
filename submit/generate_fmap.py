@@ -11,7 +11,7 @@ parser.add_argument('--dataset', type=str, default='HMDB51')
 parser.add_argument('--model', type=str, default='vgg19')
 parser.add_argument('--layer', type=str, default='block5_pool')
 parser.add_argument('--fusion', type=str, default='mean')   # mean  or  max
-parser.add_argument('--folder', type=str, default='spatial_10/frame')   # JTM_mc/x, JTM_ori/x, JDM_mc/x, JDM_ori/x, spatial_x/frame
+parser.add_argument('--folder', type=str, default='JTM_ori/15')   # JTM_mc/x, JTM_ori/x, JDM_mc/x, JDM_ori/x, spatial_x/frame
 parser.add_argument('--top', type=bool, default=False)
 args = parser.parse_args()
 

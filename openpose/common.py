@@ -315,6 +315,7 @@ def get_best_joints(img, human_list, pre_centers):
             dis = []
             for cts in all_centers:
                 dis.append(cal_distance(cts, pre_centers))
+            # print(dis)
             index = np.argmin(dis)
             best_joints = all_centers[index]
             cover = True

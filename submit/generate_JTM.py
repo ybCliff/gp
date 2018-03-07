@@ -4,7 +4,7 @@ import random, time
 from matplotlib import pyplot as plt
 root = "D:/graduation_project/workspace/dataset/HMDB51/"
 avg_split_num = 11
-loop_num = 15
+loop_num = 10
 
 jetMap = np.array([
 [0,0,0.66667],
@@ -79,9 +79,9 @@ def display(x, y, id, type, JTM_path, read_video_name):
 
 
 def run(scope):
-    x_path = root + scope + '/ori_x_mc/'
-    y_path = root + scope + '/ori_y_mc/'
-    JTM_path = root + scope + '/JTM_mc/' + str(loop_num) + '/'
+    x_path = root + scope + '/ori_x/'
+    y_path = root + scope + '/ori_y/'
+    JTM_path = root + scope + '/JTM_ori/' + str(loop_num) + '/'
     if not os.path.exists(JTM_path):
         os.makedirs(JTM_path)
     filelist = os.listdir(x_path)
@@ -97,7 +97,8 @@ def run(scope):
         y = load_data(y_path + fn)
         display(x, y, tmp[0], tmp[1], JTM_path, read_video_name)
 
-run("train2")
-run("test2")
-run("train3")
-run("test3")
+run("train1")
+run("test1")
+# run("test2")
+# run("train3")
+# run("test3")

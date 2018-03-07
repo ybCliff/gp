@@ -1,8 +1,8 @@
 import shutil
 import os
 root = "D:/graduation_project/workspace/dataset/HMDB51/"
-scopex = 'ori_x_mc/'
-scopey = 'ori_y_mc/'
+scopex = 'ori_x/'
+scopey = 'ori_y/'
 x_path = root + scopex
 y_path = root + scopey
 num2split = {0:"train1", 1:"train2", 2:"train3", 3:"test1", 4:"test2", 5:"test3"}

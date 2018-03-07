@@ -23,8 +23,8 @@ video_path = root + "video/"
 
 x_path = root + 'ori_x/'
 y_path = root + 'ori_y/'
-x_path_mc = root + 'ori_x_mc/'
-y_path_mc = root + 'ori_y_mc/'
+x_path_mc = root + 'ori_x/'
+y_path_mc = root + 'ori_y/'
 
 
 class CocoPart(Enum):
@@ -131,7 +131,7 @@ def display(img, img_mc):
     cv2.imshow('result', convas)
     cv2.waitKey(0)
 
-video_name = "1019_10.avi"
+video_name = "440_5.avi"
 # file_list = os.listdir(train_x_path)
 fn = video_name.split('.')[0] + '.txt'
 x = load_data(x_path+fn)
