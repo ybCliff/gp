@@ -13,6 +13,9 @@ parser.add_argument('--layer', type=str, default='block5_pool')
 parser.add_argument('--fusion', type=str, default='mean')   # mean  or  max
 parser.add_argument('--folder', type=str, default='JTM_ori/15')   # JTM_mc/x, JTM_ori/x, JDM_mc/x, JDM_ori/x, spatial_x/frame
 parser.add_argument('--top', type=bool, default=False)
+parser.add_argument('--split1', type=bool, default=False)
+parser.add_argument('--split2', type=bool, default=False)
+parser.add_argument('--split3', type=bool, default=False)
 args = parser.parse_args()
 
 root = "D:/graduation_project/workspace/dataset/"+args.dataset+'/'
@@ -65,6 +68,19 @@ def run(read_path, model, write_path, start):
 
     print(read_path, 'end!!!')
 
+
+def run_according2_split(split):
+    train = 'train' + str(split) + '/'
+    test = 'test' + str(split) + '/'
+    read_path1 = root + train + args.folder + '/'
+    write_fmap_path1 = read_path1 + folder_name + '/'
+
+    read_path2 = root + test + args.folder + '/'
+    write_fmap_path2 = read_path2 + folder_name + '/'
+
+    run(read_path1, model, write_fmap_path1, 0)
+    run(read_path2, model, write_fmap_path2, 0)
+
 if __name__ == '__main__':
     # while True:
     #     current_time = time.localtime(time.time())
@@ -75,14 +91,12 @@ if __name__ == '__main__':
     base_model = VGG19(weights='imagenet', include_top=args.top)
     model = Model(inputs=base_model.input, outputs=base_model.get_layer(args.layer).output)
 
-    read_path1 = root + 'train1/' + args.folder + '/'
-    write_fmap_path1 = read_path1 + folder_name + '/'
-
-    read_path2 = root + 'test1/' + args.folder + '/'
-    write_fmap_path2 = read_path2 + folder_name + '/'
-
-    run(read_path1, model, write_fmap_path1, 0)
-    run(read_path2, model, write_fmap_path2, 0)
+    if args.split1:
+        run_according2_split(1)
+    if args.split2:
+        run_according2_split(2)
+    if args.split3:
+        run_according2_split(3)
 
 
 
