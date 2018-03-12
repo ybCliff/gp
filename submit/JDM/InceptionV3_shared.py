@@ -4,17 +4,22 @@ import argparse
 import numpy as np
 import os, time, cv2, random
 import keras
+from keras.optimizers import SGD
 from keras.models import Model
 from keras.layers import Dense, GlobalAveragePooling2D, Dropout
 from keras.models import load_model
+from scipy.stats import mode
+
 
 parser = argparse.ArgumentParser(description='')
 parser.add_argument('--split', type=int, default=1)
 parser.add_argument('--echo_begin', type=int, default=0)
 parser.add_argument('--echo_end', type=int, default=1)
+parser.add_argument('--spe', type=int, default=4)
 parser.add_argument('--frame', type=int, default=10)
 parser.add_argument('--model_name', type=str, default='')
-parser.add_argument('--first', type=bool, default=True)
+parser.add_argument('--first', type=int, default=1)
+parser.add_argument('--learning_rate', type=float, default=0.01)
 args = parser.parse_args()
 
 root = 'D:/graduation_project/workspace/dataset/HMDB51/'
@@ -25,6 +30,7 @@ path_train_ori = root + train + folder_ori
 path_train_mc = root + train + folder_mc
 
 num_classes = 51
+loop_num = 10
 
 save_model_root = 'D:/graduation_project/JDM_training/InceptionV3/shared/'
 if not os.path.exists(save_model_root):
@@ -61,18 +67,20 @@ def generate_batch_traindata_random(x_train_ori, x_train_mc, y_train, batch_size
 
 
 def get_model(first=True, model_path=''):
-    if first:
+    print(first, model_path)
+
+    return model
+
+if __name__ == '__main__':
+    print(args)
+    load_model_path = save_model_root + args.model_name
+    if args.first == 1:
         model = Two_input_shared_InceptionV3()
         for layer in model.layers:
             layer.trainable = True
     else:
-        model = load_model(model_path)
-    return model
-
-if __name__ == '__main__':
-    load_model_path = save_model_root + args.model_name
-    model = get_model(args.first, load_model_path)
-    # num = 14
+        model = load_model(load_model_path)
+    # num = 10
     # x = cv2.imread(path_train_mc + '0_0_1.jpg')
     # x1 = []
     # x2 = []
@@ -82,11 +90,10 @@ if __name__ == '__main__':
     # out = model.predict([np.array(x1), np.array(x2)])
     # print(out.shape)
 
-
-    # # model = Base_cnn()
-    model.compile(optimizer='rmsprop', loss='categorical_crossentropy')
-    spe = 10
-    epochs_per_round = 700
+    optimizer = SGD(args.learning_rate)
+    model.compile(optimizer=optimizer, loss='categorical_crossentropy')
+    spe = args.spe
+    epochs_per_round = 700 #700
     round = 3
     batch_size = 10
     ori_file_list = preprocess_file_list(os.listdir(path_train_ori))

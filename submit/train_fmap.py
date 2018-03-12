@@ -1,6 +1,6 @@
 import keras
 from keras.datasets import mnist
-from keras.models import Sequential
+from keras.models import Sequential, load_model
 from keras.layers import Dense, Dropout, Conv1D, LSTM, MaxPooling1D
 from keras.layers.normalization import BatchNormalization
 from keras.optimizers import RMSprop
@@ -16,16 +16,17 @@ parser.add_argument('--model', type=str, default='vgg19')
 parser.add_argument('--layer', type=str, default='block5_pool')
 parser.add_argument('--fusion', type=str, default='mean')   # mean  or  max
 parser.add_argument('--folder', type=str, default='JTM_mc/15')   # JTM_mc/x, JTM_ori/x, JDM_mc/x, JDM_ori/x, spatial_x/frame
+parser.add_argument('--frame', type=int, default=15)
 parser.add_argument('--split', type=int, default=1)
 args = parser.parse_args()
 
-spatial_num = 25
-loop_num = 5
+spatial_num = 15
+loop_num = 3
 assert spatial_num % loop_num == 0
 
 num_classes = 51
-batch_size = 512
-epochs = 100
+batch_size = 256
+epochs = 70
 read_loop = True
 alternate = False
 
@@ -246,7 +247,8 @@ def evaluate1(model, x, y, intervel=5):
     print("Accuracy:", correct/all)
 
 
-def evaluate2(model, x, y, intervel=spatial_num//loop_num, level1=0, level2=0, pre=0):
+def evaluate2(model, x, y, intervel=spatial_num//loop_num, level1=0, level2=0, pre=0, write_csv=True):
+    trg_path = 'D:/graduation_project/JTM_training/statistics/'
     begin = 0
     correct = 0
     all = 0
@@ -281,8 +283,8 @@ def evaluate2(model, x, y, intervel=spatial_num//loop_num, level1=0, level2=0, p
         res_count.append(type_count[i])
         # print(i, type_count[i], correct_count[i] / type_count[i])
 
-    if correct/all > pre:
-        file_to_write = open(str(spatial_num)+ '_b' + str(batch_size) + '_'+str(level1) + '_' + str(level2) + '.csv', 'w')
+    if correct/all > pre and write_csv:
+        file_to_write = open(trg_path + str(spatial_num)+ '_b' + str(batch_size) + '_'+str(level1) + '_' + str(level2) + '.csv', 'w')
         file_to_write.write(','.join([str(i) for i in res])+'\n')
         file_to_write.write(','.join([str(i) for i in res_count]) + '\n')
         file_to_write.write(str(correct/all))
@@ -308,46 +310,52 @@ def evaluate3(model, x, y, intervel=5):
     print("Accuracy:", correct/all)
 
 
-def loop_test(x_train, y_train, x_test, y_test):
+def specific_level_test(level1, level2, x_train, y_train, x_test, y_test, save_model=True):
+    trg_path = 'D:/graduation_project/JTM_training/model/'
     drop = 0.4
-    rec = {}
-    trg_path = '../model/'
     if not os.path.exists(trg_path):
         os.makedirs(trg_path)
+    model = Sequential()
+    model.add(LSTM(level1, input_shape=(loop_num * 2 if alternate else loop_num, 512), return_sequences=True, dropout=drop))
+    model.add(LSTM(level2, dropout=drop))
+    model.add(Dense(num_classes, activation='softmax'))
+
+    model.compile(loss='categorical_crossentropy',
+                  optimizer=RMSprop(),
+                  metrics=['accuracy'])
+    pre_best = 0
+    best_epochs = 0
+    best_model = None
+    for i in range(epochs):
+        history = model.fit(x_train, y_train,
+                  batch_size=batch_size,
+                  epochs=1,
+                  validation_data=(x_test, y_test),
+                  verbose=2)
+        if history.history['val_acc'][0] > 0.315:
+            tmp = evaluate2(model, x_test, y_test, level1=level1, level2=level2, pre=pre_best)
+            if tmp > pre_best:
+                pre_best = tmp
+                if save_model:
+                    model.save(trg_path + 'b' + str(batch_size) + '_' + str(level1) + '_' + str(level2) + '.h5')
+                best_epochs = i
+    # my_model = load_model(trg_path + 'b' + str(batch_size) + '_' + str(level1) + '_' + str(level2) + '.h5')
+    return pre_best#, my_model
+
+def loop_test(x_train, y_train, x_test, y_test):
+    rec = {}
+
     # for level1 in range(320, 1025, 64):
     #     for level2 in range(64, level1+1, 64):
-    for level1 in range(128, 129, 64):
-        for level2 in range(64, 65, 64):
+    for level1 in range(128, 1025, 128):
+        for level2 in range(64, level1+1, 64):
             print(level1,'_',level2)
-            model = Sequential()
-            model.add(LSTM(level1, input_shape=(loop_num * 2 if alternate else loop_num, 512), return_sequences=True, dropout=drop))
-            # model.add(LSTM(512, return_sequences=True, dropout=drop))
-            model.add(LSTM(level2, dropout=drop))
-            model.add(Dense(num_classes, activation='softmax'))
-
-            model.compile(loss='categorical_crossentropy',
-                          optimizer=RMSprop(),
-                          metrics=['accuracy'])
-
-            pre_best = 0
-            best_model = Sequential()
-            best_epochs = 0
-            for i in range(epochs):
-                model.fit(x_train, y_train,
-                          batch_size=batch_size,
-                          epochs=1,
-                          validation_data=(x_test, y_test),
-                          verbose=2)
-                tmp = evaluate2(model, x_test, y_test, level1=level1, level2=level2, pre=pre_best)
-                if tmp > pre_best:
-                    pre_best = tmp
-                    best_model = model
-                    best_epochs = i
-            # best_model.save(trg_path + 'b' + str(batch_size) + '_' + str(level1) + '_' + str(level2) + '_' + str(int(pre_best * 10000))+'_e' + str(best_epochs)+ '.h5')
+            pre_best= specific_level_test(level1, level2, x_train, y_train, x_test, y_test)
             rec[str(level1)+'_'+str(level2)]=pre_best
     print(rec)
     for item in rec:
         print(item)
+    # evaluate2(model, x_test, y_test, write_csv=False)
 
 if __name__ == '__main__':
     # train_mc_path = root + train + '/JTM_mc/25/' + folder_name + '/'
@@ -361,12 +369,26 @@ if __name__ == '__main__':
     # x_train, y_train = load_data(fmap_train_path)
     # x_test, y_test = load_data(fmap_test_path)
 
-    train_mc_path = root + train + '/JTM_mc/25/' + folder_name + '/'
-    train_ori_path = root + train + '/JTM_ori/25/' + folder_name + '/'
-    test_mc_path = root + test + '/JTM_mc/25/' + folder_name + '/'
-    test_ori_path = root + test + '/JTM_ori/25/' + folder_name + '/'
-    x_train, y_train = mean_max_load(train_mc_path, train_ori_path)
-    x_test, y_test = mean_max_load(test_mc_path, test_ori_path)
+    # train_mc_path = root + train + '/JTM_mc/' + str(args.frame) + '/' + folder_name + '/'
+    # train_ori_path = root + train + '/JTM_ori/' + str(args.frame) + '/' + folder_name + '/'
+    # test_mc_path = root + test + '/JTM_mc/' + str(args.frame) + '/' + folder_name + '/'
+    # test_ori_path = root + test + '/JTM_ori/' + str(args.frame) + '/' + folder_name + '/'
+    # x_train, y_train = mean_max_load(train_mc_path, train_ori_path)
+    # x_test, y_test = mean_max_load(test_mc_path, test_ori_path)
+    #
+    # print("train samples shape:", x_train.shape)
+    # print("test samples shape:", x_test.shape)
+    #
+    # y_train = keras.utils.to_categorical(y_train, num_classes)
+    # y_test = keras.utils.to_categorical(y_test, num_classes)
+    #
+    # loop_test(x_train, y_train, x_test, y_test)
+
+
+    train_mc_path = root + train + '/JTM_mc/' + str(args.frame) + '/' + folder_name + '/'
+    test_mc_path = root + test + '/JTM_mc/' + str(args.frame) + '/' + folder_name + '/'
+    x_train, y_train = load_data(train_mc_path)
+    x_test, y_test = load_data(test_mc_path)
 
     print("train samples shape:", x_train.shape)
     print("test samples shape:", x_test.shape)
@@ -374,10 +396,19 @@ if __name__ == '__main__':
     y_train = keras.utils.to_categorical(y_train, num_classes)
     y_test = keras.utils.to_categorical(y_test, num_classes)
 
-    loop_test(x_train, y_train, x_test, y_test)
-    # model = lstm(x_train, y_train, x_test, y_test)
-    # evaluate1(model, x_test, y_test)
-    # evaluate2(model, x_test, y_test)
-    # evaluate3(model, x_test, y_test)
-    # mlp(x_train, y_train, x_test, y_test)
-    # cnn_lstm(x_train, y_train, x_test, y_test)
+    best = specific_level_test(384, 64, x_train, y_train, x_test, y_test, save_model=False)
+    print('Acc', best)
+
+
+
+######################################
+    # test_mc_path = root + test + '/JTM_mc/' + str(args.frame) + '/' + folder_name + '/'
+    # test_ori_path = root + test + '/JTM_ori/' + str(args.frame) + '/' + folder_name + '/'
+    # x_test, y_test = mean_max_load(test_mc_path, test_ori_path)
+    #
+    # print("test samples shape:", x_test.shape)
+    #
+    # y_test = keras.utils.to_categorical(y_test, num_classes)
+    # model = load_model('D:/graduation_project/JTM_training/model/b256_256_128_3505_e35.h5')
+    # evaluate2(model, x_test, y_test, write_csv=False)
+

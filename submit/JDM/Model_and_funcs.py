@@ -1,5 +1,5 @@
 from keras.models import Model
-from keras.layers import Conv2D, MaxPooling2D, Input, Dense, Flatten, Dropout, GlobalAveragePooling2D
+from keras.layers import Conv2D, MaxPooling2D, Input, Dense, Flatten, Dropout, GlobalAveragePooling2D, GlobalAveragePooling1D, Conv3D
 from keras.applications.imagenet_utils import _obtain_input_shape
 from keras.engine.topology import get_source_inputs
 from keras import backend as K
@@ -99,18 +99,22 @@ def Two_input_shared_cnn(include_top=True, weights=None,
 def Two_input_shared_InceptionV3(include_top=True, weights=None,
           input_shape=(224, 224, 3),
           classes=51):
-    ori_model = InceptionV3(input_shape=(224, 224, 3), weights='imagenet', include_top=False)
-    tmp = GlobalAveragePooling2D()(ori_model.output)
-    base_model = Model(inputs=ori_model.input, outputs=tmp)
-
+    base_model = InceptionV3(input_shape=(224, 224, 3), weights='imagenet', include_top=False)
     img_a = Input(shape=input_shape)
     img_b = Input(shape=input_shape)
 
     out_a = base_model(img_a)
     out_b = base_model(img_b)
 
-    x = keras.layers.concatenate([out_a, out_b], name='concatenate')
+    x = keras.layers.concatenate([out_a, out_b], name='concatenate', axis=1)
+    x = GlobalAveragePooling2D()(x)
+
+
     if include_top:
+        x = Dense(1024, activation='relu', name='fc1')(x)
+        x = Dropout(0.5)(x)
+        x = Dense(512, activation='relu', name='fc2')(x)
+        x = Dropout(0.5)(x)
         x = Dense(classes, activation='softmax', name='predictions')(x)
 
     model = Model([img_a, img_b], x)

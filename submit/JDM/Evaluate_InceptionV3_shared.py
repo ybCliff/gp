@@ -37,6 +37,7 @@ if not os.path.exists(save_csv_path):
     os.makedirs(save_csv_path)
 
 def evaluate(model, path_ori, path_mc, csv_name='', write_csv=False):
+    print("Start to evaluate")
     file_list = preprocess_file_list(os.listdir(path_ori))
     count = 0
     correct1 = 0
@@ -47,10 +48,13 @@ def evaluate(model, path_ori, path_mc, csv_name='', write_csv=False):
     sample_count = 0
     x_ori = []
     x_mc = []
+    begin_Time = time.time()
     for file in file_list:
         count += 1
         x_ori.append(cv2.imread(path_ori + file))
         x_mc.append(cv2.imread(path_mc + file))
+        if count % 100 == 0:
+            print(count, time.time() - begin_Time)
         if count % loop_num == 0:
             ground_true = int(file.split('.')[0].split('_')[2]) - 1
             type_count[ground_true] += 1
@@ -70,7 +74,7 @@ def evaluate(model, path_ori, path_mc, csv_name='', write_csv=False):
             if Mode == ground_true:
                 correct2 += 1
                 type_correct2[ground_true] += 1
-
+            print(ground_true, res, Mode)
             sample_count += 1
             # print(sample_count, ground_true, res[0], Mode)
             x_ori = []
@@ -83,13 +87,19 @@ def evaluate(model, path_ori, path_mc, csv_name='', write_csv=False):
         acc1 = []
         acc2 = []
         index = []
+        final_count = []
         for i in range(num_classes):
             if type_count[i] == 0:
                 continue
-            index.append(i)
+            index.append(int(i))
+            final_count.append(type_count[i])
             acc1.append(type_correct1[i] / type_count[i])
             acc2.append(type_correct2[i] / type_count[i])
 
+        print(index)
+        print(acc1)
+        print(acc2)
+        # print(type_count[index])
         file_to_write = open(save_csv_path+csv_name, 'w')
         print(','.join(['Mult Acc', str(correct1/sample_count), 'Mode Acc', str(correct2 / sample_count)]), file=file_to_write)
 
@@ -97,7 +107,7 @@ def evaluate(model, path_ori, path_mc, csv_name='', write_csv=False):
         print(','.join([str(i) for i in index]), file=file_to_write)
 
         print('count,', end="", file=file_to_write)
-        print(','.join([str(int(i)) for i in type_count[index]]), file=file_to_write)
+        print(','.join([str(int(i)) for i in final_count]), file=file_to_write)
 
         print('mult,', end="", file=file_to_write)
         print(','.join([str(i) for i in acc1]), file=file_to_write)
@@ -108,6 +118,7 @@ def evaluate(model, path_ori, path_mc, csv_name='', write_csv=False):
 
 
 if __name__ == '__main__':
+    print(load_model_root + args.model_name)
     model = load_model(load_model_root + args.model_name)
     pre = args.model_name.split('.')[0] + '.csv'
     evaluate(model, path_train_ori, path_train_mc, csv_name='train_'+pre, write_csv=True)

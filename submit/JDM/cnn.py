@@ -10,7 +10,7 @@ from keras.models import load_model
 
 parser = argparse.ArgumentParser(description='')
 parser.add_argument('--split', type=int, default=1)
-parser.add_argument('--folder', type=str, default='JDM_ori/10/')
+parser.add_argument('--folder', type=str, default='JDM_mc/10/')
 args = parser.parse_args()
 
 root = 'D:/graduation_project/workspace/dataset/HMDB51/'
@@ -66,9 +66,8 @@ def get_model(first=True, model_path=''):
         # this is the model we will train
         model = Model(inputs=base_model.input, outputs=predictions)
 
-        for layer in base_model.layers:
-            print(layer.name)
-            layer.trainable = False
+        for layer in model.layers:
+            layer.trainable = True
     else:
         model = load_model(model_path)
     return model
@@ -79,16 +78,16 @@ if __name__ == '__main__':
     # out = model.predict(data)
     # print(out, out.shape)
     load_model_path = save_model_root + ''
-    model = get_model(False, 'D:/graduation_project/JDM_cnn/e1_spe1_round2.h5')
+    model = get_model(True, 'D:/graduation_project/JDM_cnn/e1_spe1_round2.h5')
     for layer in model.layers:
         if layer.trainable:
             print(layer.name)
     # model = Base_cnn()
     model.compile(optimizer='rmsprop', loss='categorical_crossentropy')
-    spe = 8
-    epochs_per_round = 100
+    spe = 5
+    epochs_per_round = 350
     round = 3
-    batch_size = 70
+    batch_size = 20
     ori_file_list = preprocess_file_list(os.listdir(path_train))
     random.shuffle(ori_file_list)
 
