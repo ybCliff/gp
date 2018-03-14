@@ -21,7 +21,7 @@ def svc(traindata,trainlabel,testdata,testlabel):
 
     print("Start training SVM...")
     beginTime = time.time()
-    svcClf = SVC(C=1,kernel="linear",cache_size=3000, max_iter=1800, tol=1)
+    svcClf = SVC(C=0.1,kernel="rbf",cache_size=3000, max_iter=1000, tol=1)
     svcClf.fit(traindata,trainlabel)
     print("SVM training time:", time.time() - beginTime)
 
@@ -49,7 +49,8 @@ loop_num = 1
 def load_data(path):
 
     if not os.path.exists(path):
-        exit(0)
+        print(path)
+        exit(100)
     file_list = os.listdir(path)
     print(path, len(file_list))
     x = []
@@ -86,8 +87,11 @@ if __name__ == '__main__':
     test = "test1"
     frame = 10
     folder_name = "vgg19_block5_pool_mean"
-    train_mc_path = root + train + '/JTM_mc/' + str(frame) + '/' + folder_name + '/'
-    test_mc_path = root + test + '/JTM_mc/' + str(frame) + '/' + folder_name + '/'
-    x_train, y_train = load_data(train_mc_path)
-    x_test, y_test = load_data(test_mc_path)
+    # train_mc_path = root + train + '/JTM_mc/' + str(frame) + '/' + folder_name + '/'
+    # test_mc_path = root + test + '/JTM_mc/' + str(frame) + '/' + folder_name + '/'
+
+    train_path = root + train + '/JDM_InceptionV3_shared/10/fc1/'
+    test_path = root + test + '/JDM_InceptionV3_shared/10/fc1/'
+    x_train, y_train = load_data(train_path)
+    x_test, y_test = load_data(test_path)
     svc(x_train, y_train, x_test, y_test)

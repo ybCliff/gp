@@ -19,8 +19,8 @@ root = 'D:/graduation_project/workspace/dataset/HMDB51/'
 train = 'train'+str(args.split)+'/'
 test = 'test'+str(args.split)+'/'
 
-folder_ori = 'JDM_ori/'+str(args.frame)+'/'
-folder_mc = 'JDM_mc/'+str(args.frame)+'/'
+folder_ori = 'JTM_ori/'+str(args.frame)+'/'
+folder_mc = 'JTM_mc/'+str(args.frame)+'/'
 
 path_train_ori = root + train + folder_ori
 path_train_mc = root + train + folder_mc
@@ -31,7 +31,7 @@ path_test_mc = root + test + folder_mc
 num_classes = 51
 loop_num = 10
 
-load_model_root = 'D:/graduation_project/JDM_training/split'+ str(args.split) + '/InceptionV3/shared/'
+load_model_root = 'D:/graduation_project/JTM_training/InceptionV3/shared/'
 save_csv_path = load_model_root + 'statistics/'
 if not os.path.exists(save_csv_path):
     os.makedirs(save_csv_path)
@@ -51,8 +51,8 @@ def evaluate(model, path_ori, path_mc, csv_name='', write_csv=False):
     begin_Time = time.time()
     for file in file_list:
         count += 1
-        x_ori.append(cv2.imread(path_ori + file))
-        x_mc.append(cv2.imread(path_mc + file))
+        x_ori.append(cv2.resize(cv2.imread(path_ori + file), (224, 224)))
+        x_mc.append(cv2.resize(cv2.imread(path_mc + file), (224, 224)))
         if count % 100 == 0:
             print(count, time.time() - begin_Time)
         if count % loop_num == 0:
@@ -74,7 +74,7 @@ def evaluate(model, path_ori, path_mc, csv_name='', write_csv=False):
             if Mode == ground_true:
                 correct2 += 1
                 type_correct2[ground_true] += 1
-            # print(ground_true, res, Mode)
+            print(ground_true, res, Mode)
             sample_count += 1
             # print(sample_count, ground_true, res[0], Mode)
             x_ori = []

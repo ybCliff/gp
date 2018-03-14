@@ -26,15 +26,15 @@ args = parser.parse_args()
 
 root = 'D:/graduation_project/workspace/dataset/HMDB51/'
 train = 'train'+str(args.split)+'/'
-folder_ori = 'JDM_ori/'+str(args.frame)+'/'
-folder_mc = 'JDM_mc/'+str(args.frame)+'/'
+folder_ori = 'JTM_ori/'+str(args.frame)+'/'
+folder_mc = 'JTM_mc/'+str(args.frame)+'/'
 path_train_ori = root + train + folder_ori
 path_train_mc = root + train + folder_mc
 
 num_classes = 51
 loop_num = 10
 
-save_model_root = 'D:/graduation_project/JDM_training/split'+ str(args.split) + '/InceptionV3/shared/'
+save_model_root = 'D:/graduation_project/JTM_training/InceptionV3/shared/'
 if not os.path.exists(save_model_root):
     os.makedirs(save_model_root)
 
@@ -49,8 +49,9 @@ def load_data(ori_file_list, batch_size, index, path_ori, path_mc):
     for file in file_list:
         tmpy = int(file.split('.')[0].split('_')[2]) - 1
         tmpy = keras.utils.to_categorical(tmpy, num_classes)
-        x_ori.append(cv2.imread(path_ori + file))
-        x_mc.append(cv2.imread(path_mc + file))
+        x_ori.append(cv2.resize(cv2.imread(path_ori + file), (224, 224)))
+        x_mc.append(cv2.resize(cv2.imread(path_mc + file), (224, 224)))
+        # print(np.array(x_ori).shape, np.array(x_mc).shape)
         y.append(tmpy)
     print('\033[1;33;44m', 'Load data', index, 'done:', time.time()-begin_time, '\033[0m')
     return np.array(x_ori), np.array(x_mc), np.array(y)
@@ -101,9 +102,11 @@ if __name__ == '__main__':
     ori_file_list = preprocess_file_list(os.listdir(path_train_ori))
     random.shuffle(ori_file_list)
 
+
     for e in range(args.echo_begin, args.echo_end):
         for i in range(round):
             x_train_ori, x_train_mc, y_train = load_data(ori_file_list, epochs_per_round * batch_size, i, path_train_ori, path_train_mc)
+            print('Shape:', x_train_ori.shape, x_train_mc.shape, y_train.shape)
             begin_time = time.time()
             history = model.fit_generator(generate_batch_traindata_random(x_train_ori, x_train_mc, y_train, batch_size),
                 samples_per_epoch=spe, epochs=epochs_per_round,

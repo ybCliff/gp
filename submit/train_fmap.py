@@ -9,6 +9,7 @@ import argparse
 import numpy as np
 import os, time, cv2
 from scipy.stats import mode
+import random
 
 parser = argparse.ArgumentParser(description='Generate feature map from joints')
 parser.add_argument('--dataset', type=str, default='HMDB51')
@@ -20,14 +21,9 @@ parser.add_argument('--frame', type=int, default=15)
 parser.add_argument('--split', type=int, default=1)
 args = parser.parse_args()
 
-spatial_num = 15
-loop_num = 3
-assert spatial_num % loop_num == 0
-
 num_classes = 51
 batch_size = 256
 epochs = 70
-read_loop = True
 alternate = False
 
 root = "D:/graduation_project/workspace/dataset/"+args.dataset+'/'
@@ -37,7 +33,7 @@ test = "test" + str(args.split)
 fmap_train_path = root + train + '/' + args.folder + '/' + folder_name + '/'
 fmap_test_path = root + test + '/' + args.folder + '/' + folder_name + '/'
 
-def load_data(path):
+def load_data(path, read_loop, loop):
 
     if not os.path.exists(path):
         exit(0)
@@ -48,6 +44,7 @@ def load_data(path):
     count = 0
     beginTime = time.time()
     myset = []
+    file_num = []
     for file in file_list:
         count += 1
         if count % 500 == 0:
@@ -58,18 +55,92 @@ def load_data(path):
 
         content = [float(i) for i in content.split(',')]
         tmpy = file.split('.')[0].split('_')[2]
-
+        # file_num.append(file)
         if read_loop:
             myset.append(content)
-            if count % loop_num == 0:
+            if count % loop == 0:
+                # print(file_num, tmpy)
                 x.append(myset)
                 y.append(int(tmpy) - 1)
                 myset = []
+                # file_num = []
         else:
             x.append(content)
             y.append(int(tmpy) - 1)
 
     return np.array(x), np.array(y)
+
+def load_spatial_data(path, detail_path, loop):
+    if not os.path.exists(path) or not os.path.exists(detail_path):
+        print("ERROR OPENING FILE!")
+        exit(0)
+    file_to_read = open(detail_path, 'r')
+    line = file_to_read.readline()
+    detail = []
+    while line and line != "":
+        line = line.replace('\n', '')
+        detail.append(int(line.split(' ')[1]))
+        line = file_to_read.readline()
+    file_to_read.close()
+    print('Detail:', detail)
+
+    file_list = os.listdir(path)
+    print(path, len(file_list))
+    x = []
+    y = []
+    count = 0
+    beginTime = time.time()
+
+    for index in range(len(detail)):
+        round = detail[index] // loop
+        remain = detail[index] % loop
+        pre_rec = []
+
+        for i in range(round):
+            myset = []
+            for j in range(loop):
+                file_to_read = open(path + file_list[count], 'r')
+                content = file_to_read.read()
+                file_to_read.close()
+
+                content = [float(i) for i in content.split(',')]
+                tmpy = file_list[count].split('.')[0].split('_')[2]
+                myset.append(content)
+                if remain != 0:
+                    pre_rec.append(content)
+                count += 1
+            x.append(myset)
+            y.append(int(tmpy) - 1)
+
+        if remain != 0:
+            pre = random.sample(pre_rec, loop-remain) if len(pre_rec) != 0 else []
+            for j in range(remain):
+                file_to_read = open(path + file_list[count], 'r')
+                content = file_to_read.read()
+                file_to_read.close()
+
+                content = [float(i) for i in content.split(',')]
+                tmpy = file_list[count].split('.')[0].split('_')[2]
+                pre.append(content)
+                count += 1
+            if len(pre_rec) == 0:
+                print(np.array(pre).shape)
+                left = loop - remain
+                for k in range(left):
+                    tmp2 = random.sample(pre, 1)
+                    if k == 0:
+                        tmp = tmp2
+                    else:
+                        tmp = np.concatenate((tmp, tmp2), axis=0)
+                pre = np.concatenate((pre, tmp), axis=0)
+
+            x.append(np.array(pre).reshape((loop, 512)).tolist())
+            y.append(int(tmpy) - 1)
+
+        if index % 50 == 0:
+            print(index, time.time() - beginTime)
+    print('Count:', count)
+    return np.array(x), np.array(y), detail
 
 def alternate_load_data(path1, path2):
     if not os.path.exists(path1) or not os.path.exists(path2):
@@ -247,7 +318,8 @@ def evaluate1(model, x, y, intervel=5):
     print("Accuracy:", correct/all)
 
 
-def evaluate2(model, x, y, intervel=spatial_num//loop_num, level1=0, level2=0, pre=0, write_csv=True):
+def evaluate2(model, x, y, spatial_num, loop, level1=0, level2=0, pre=0, write_csv=True):
+    intervel = spatial_num//loop
     trg_path = 'D:/graduation_project/JTM_training/statistics/'
     begin = 0
     correct = 0
@@ -310,13 +382,65 @@ def evaluate3(model, x, y, intervel=5):
     print("Accuracy:", correct/all)
 
 
-def specific_level_test(level1, level2, x_train, y_train, x_test, y_test, save_model=True):
-    trg_path = 'D:/graduation_project/JTM_training/model/'
+test_detail = []
+def spatial_evaluate(model, x, y, level1, level2, loop, pre=0, write_csv=False, trg_path=''):
+    begin = 0
+    correct = 0
+    all = 0
+    type_count = [0] * 51
+    correct_count = [0] * 51
+    index = 0
+    # print("Begin to evaluate")
+    while begin < x.shape[0]:
+        intervel = test_detail[index] // loop
+        intervel += 1 if test_detail[index] % loop != 0 else 0
+
+        ground_true = np.where(y[begin] == 1)[0][0]
+        tmpx = x[begin:begin + intervel]
+        tmpy = model.predict(tmpx)
+
+        tmp = np.zeros((1, num_classes))
+        tmp[tmp == 0] = 1.0
+        # print(index, test_detail[index], intervel)
+        for k in range(intervel):
+            tmp *= tmpy[k]
+
+        res = np.argmax(tmp, axis=1)
+        begin += intervel
+        all += 1
+        index += 1
+
+        type_count[ground_true] += 1
+        if res[0] == ground_true:
+            correct_count[ground_true] += 1
+            correct += 1.0
+    print("Accuracy:", correct / all)
+    res = []
+    res_count = []
+    for i in range(51):
+        if type_count[i] == 0:
+            continue
+        res.append(correct_count[i] / type_count[i])
+        res_count.append(type_count[i])
+        # print(i, type_count[i], correct_count[i] / type_count[i])
+
+    if correct / all > pre and write_csv:
+        file_to_write = open(
+            trg_path + str(spatial_num) + '_b' + str(batch_size) + '_' + str(level1) + '_' + str(level2) + '.csv', 'w')
+        file_to_write.write(','.join([str(i) for i in res]) + '\n')
+        file_to_write.write(','.join([str(i) for i in res_count]) + '\n')
+        file_to_write.write(str(correct / all))
+        file_to_write.close()
+    return correct / all
+
+
+
+def specific_level_test(level1, level2, x_train, y_train, x_test, y_test, loop, save_model=True, trg_path='D:/graduation_project/JTM_training/model/'):
     drop = 0.4
     if not os.path.exists(trg_path):
         os.makedirs(trg_path)
     model = Sequential()
-    model.add(LSTM(level1, input_shape=(loop_num * 2 if alternate else loop_num, 512), return_sequences=True, dropout=drop))
+    model.add(LSTM(level1, input_shape=(loop * 2 if alternate else loop, 512), return_sequences=True, dropout=drop))
     model.add(LSTM(level2, dropout=drop))
     model.add(Dense(num_classes, activation='softmax'))
 
@@ -332,12 +456,14 @@ def specific_level_test(level1, level2, x_train, y_train, x_test, y_test, save_m
                   epochs=1,
                   validation_data=(x_test, y_test),
                   verbose=2)
-        if history.history['val_acc'][0] > 0.315:
-            tmp = evaluate2(model, x_test, y_test, level1=level1, level2=level2, pre=pre_best)
+        if history.history['val_acc'][0] > 0.62:
+            # tmp = evaluate2(model, x_test, y_test, level1=level1, level2=level2, pre=pre_best, loop=loop)
+            tmp = spatial_evaluate(model, x_test, y_test, level1, level2, pre=pre_best, loop=loop)
             if tmp > pre_best:
                 pre_best = tmp
                 if save_model:
-                    model.save(trg_path + 'b' + str(batch_size) + '_' + str(level1) + '_' + str(level2) + '.h5')
+                    model.save(trg_path + 'loop'+str(loop) + '_frame10_' + str(level1) + '_' + str(level2) + '_acc'+str(int(pre_best*100000))+'.h5')
+                pre_best = 0
                 best_epochs = i
     # my_model = load_model(trg_path + 'b' + str(batch_size) + '_' + str(level1) + '_' + str(level2) + '.h5')
     return pre_best#, my_model
@@ -384,20 +510,20 @@ if __name__ == '__main__':
     #
     # loop_test(x_train, y_train, x_test, y_test)
 
-
-    train_mc_path = root + train + '/JTM_mc/' + str(args.frame) + '/' + folder_name + '/'
-    test_mc_path = root + test + '/JTM_mc/' + str(args.frame) + '/' + folder_name + '/'
-    x_train, y_train = load_data(train_mc_path)
-    x_test, y_test = load_data(test_mc_path)
-
-    print("train samples shape:", x_train.shape)
-    print("test samples shape:", x_test.shape)
-
-    y_train = keras.utils.to_categorical(y_train, num_classes)
-    y_test = keras.utils.to_categorical(y_test, num_classes)
-
-    best = specific_level_test(384, 64, x_train, y_train, x_test, y_test, save_model=False)
-    print('Acc', best)
+######################################
+    # train_mc_path = root + train + '/JTM_mc/' + str(args.frame) + '/' + folder_name + '/'
+    # test_mc_path = root + test + '/JTM_mc/' + str(args.frame) + '/' + folder_name + '/'
+    # x_train, y_train = load_data(train_mc_path)
+    # x_test, y_test = load_data(test_mc_path)
+    #
+    # print("train samples shape:", x_train.shape)
+    # print("test samples shape:", x_test.shape)
+    #
+    # y_train = keras.utils.to_categorical(y_train, num_classes)
+    # y_test = keras.utils.to_categorical(y_test, num_classes)
+    #
+    # best = specific_level_test(384, 64, x_train, y_train, x_test, y_test, save_model=False)
+    # print('Acc', best)
 
 
 
@@ -411,4 +537,26 @@ if __name__ == '__main__':
     # y_test = keras.utils.to_categorical(y_test, num_classes)
     # model = load_model('D:/graduation_project/JTM_training/model/b256_256_128_3505_e35.h5')
     # evaluate2(model, x_test, y_test, write_csv=False)
+
+######################################
+    train_path = root + train + '/spatial_10/frame/' + folder_name + '/'
+    test_path = root + test + '/spatial_10/frame/' + folder_name + '/'
+    train_detail_path = root + train + '/spatial_10/detail/_frame_num.txt'
+    test_detail_path = root + test + '/spatial_10/detail/_frame_num.txt'
+
+    x_train, y_train, _ = load_spatial_data(train_path, train_detail_path, loop=5)
+    x_test, y_test, detail = load_spatial_data(test_path, test_detail_path, loop=5)
+    test_detail = detail
+
+    print("train samples shape:", x_train.shape)
+    print("test samples shape:", x_test.shape)
+
+    y_train = keras.utils.to_categorical(y_train, num_classes)
+    y_test = keras.utils.to_categorical(y_test, num_classes)
+
+    #
+    trg_path = 'D:/graduation_project/SPATIAL_training/LSTM/'
+    # mlp(x_train, y_train, x_test, y_test)
+    specific_level_test(256, 64, x_train, y_train, x_test, y_test, save_model=True, trg_path=trg_path, loop=5)
+
 
