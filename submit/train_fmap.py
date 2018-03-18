@@ -1,3 +1,4 @@
+from sklearn.svm import SVC
 import keras
 from keras.datasets import mnist
 from keras.models import Sequential, load_model
@@ -23,7 +24,7 @@ args = parser.parse_args()
 
 num_classes = 51
 batch_size = 256
-epochs = 70
+epochs = 5000
 alternate = False
 
 root = "D:/graduation_project/workspace/dataset/"+args.dataset+'/'
@@ -32,6 +33,29 @@ train = "train" + str(args.split)
 test = "test" + str(args.split)
 fmap_train_path = root + train + '/' + args.folder + '/' + folder_name + '/'
 fmap_test_path = root + test + '/' + args.folder + '/' + folder_name + '/'
+
+
+def tmp_load_data(path):
+    x = []
+    y = []
+    file_list = os.listdir(path)
+    count = 0
+    for file in file_list:
+        if '.txt' not in file:
+            continue
+        file_to_read = open(path + file, 'r')
+        tmp = file_to_read.read()
+        tmp = tmp.replace('[', '').replace(']','')
+        tmpx = [float(i) for i in tmp.split(',')]
+        file_to_read.close()
+
+        x.append(tmpx)
+        y.append(int(file.split('.')[0].split('_')[1]) - 1)
+        count+=1
+        if count % 500 == 0:
+            print(count)
+    return np.array(x), np.array(y)
+
 
 def load_data(path, read_loop, loop):
 
@@ -217,7 +241,7 @@ def mean_max_load(path1, path2):
 
 def mlp(x_train, y_train, x_test, y_test):
     model = Sequential()
-    model.add(Dense(512, activation='relu', input_shape=(512,)))
+    model.add(Dense(512, activation='relu', input_shape=(2048,)))
     # model.add(BatchNormalization())
     model.add(Dropout(0.5))
     model.add(Dense(512, activation='relu'))
@@ -318,9 +342,9 @@ def evaluate1(model, x, y, intervel=5):
     print("Accuracy:", correct/all)
 
 
-def evaluate2(model, x, y, spatial_num, loop, level1=0, level2=0, pre=0, write_csv=True):
+def evaluate2(model, x, y, spatial_num, loop, trg_path, level1=0, level2=0, pre=0, write_csv=True):
     intervel = spatial_num//loop
-    trg_path = 'D:/graduation_project/JTM_training/statistics/'
+    trg_path += 'statistics/'
     begin = 0
     correct = 0
     all = 0
@@ -440,7 +464,7 @@ def specific_level_test(level1, level2, x_train, y_train, x_test, y_test, loop, 
     if not os.path.exists(trg_path):
         os.makedirs(trg_path)
     model = Sequential()
-    model.add(LSTM(level1, input_shape=(loop * 2 if alternate else loop, 512), return_sequences=True, dropout=drop))
+    model.add(LSTM(level1, input_shape=(loop * 2 if alternate else loop, 1024), return_sequences=True, dropout=drop))
     model.add(LSTM(level2, dropout=drop))
     model.add(Dense(num_classes, activation='softmax'))
 
@@ -456,9 +480,9 @@ def specific_level_test(level1, level2, x_train, y_train, x_test, y_test, loop, 
                   epochs=1,
                   validation_data=(x_test, y_test),
                   verbose=2)
-        if history.history['val_acc'][0] > 0.62:
-            # tmp = evaluate2(model, x_test, y_test, level1=level1, level2=level2, pre=pre_best, loop=loop)
-            tmp = spatial_evaluate(model, x_test, y_test, level1, level2, pre=pre_best, loop=loop)
+        if history.history['val_acc'][0] > 0.56:
+            # tmp = evaluate2(model, x_test, y_test, spatial_num=10, level1=level1, level2=level2, pre=pre_best, loop=loop, trg_path=trg_path, write_csv=False)
+            tmp = spatial_evaluate(model, x_test, y_test, level1, level2, pre=pre_best, loop=loop, trg_path=trg_path, write_csv=False)
             if tmp > pre_best:
                 pre_best = tmp
                 if save_model:
@@ -482,6 +506,37 @@ def loop_test(x_train, y_train, x_test, y_test):
     for item in rec:
         print(item)
     # evaluate2(model, x_test, y_test, write_csv=False)
+
+def svc(traindata,trainlabel,testdata,testlabel):
+    # beginTime = time.time()
+    # min_max_scaler = preprocessing.MinMaxScaler()
+    # traindata = min_max_scaler.fit_transform(traindata)
+    # testdata = min_max_scaler.transform(testdata)
+    # print("transform data:", time.time() - beginTime)
+
+    print("Start training SVM...")
+    beginTime = time.time()
+    svcClf = SVC(C=1,kernel="linear",cache_size=3000, max_iter=5000, tol=1)
+    svcClf.fit(traindata,trainlabel)
+    print("SVM training time:", time.time() - beginTime)
+
+    beginTime = time.time()
+    pred_trainlabel = svcClf.predict(traindata)
+    print("predict training time:", time.time() - beginTime)
+    num = len(pred_trainlabel)
+    print(pred_trainlabel)
+    accuracy = len([1 for i in range(num) if trainlabel[i] == pred_trainlabel[i]]) / float(num)
+    print("train Accuracy:", accuracy)
+
+    beginTime = time.time()
+    pred_testlabel = svcClf.predict(testdata)
+    print("predict testing time:", time.time() - beginTime)
+    num = len(pred_testlabel)
+    print(pred_testlabel)
+    accuracy = len([1 for i in range(num) if testlabel[i]==pred_testlabel[i]])/float(num)
+    print("test Accuracy:",accuracy)
+
+    return svcClf
 
 if __name__ == '__main__':
     # train_mc_path = root + train + '/JTM_mc/25/' + folder_name + '/'
@@ -538,25 +593,79 @@ if __name__ == '__main__':
     # model = load_model('D:/graduation_project/JTM_training/model/b256_256_128_3505_e35.h5')
     # evaluate2(model, x_test, y_test, write_csv=False)
 
-######################################
-    train_path = root + train + '/spatial_10/frame/' + folder_name + '/'
-    test_path = root + test + '/spatial_10/frame/' + folder_name + '/'
+##############################  spatial training ###############################
+    # train_path = root + train + '/spatial_10/frame/' + folder_name + '/'
+    # test_path = root + test + '/spatial_10/frame/' + folder_name + '/'
+    # train_detail_path = root + train + '/spatial_10/detail/_frame_num.txt'
+    # test_detail_path = root + test + '/spatial_10/detail/_frame_num.txt'
+    #
+    # x_train, y_train, _ = load_spatial_data(train_path, train_detail_path, loop=5)
+    # x_test, y_test, detail = load_spatial_data(test_path, test_detail_path, loop=5)
+    # test_detail = detail
+    #
+    # print("train samples shape:", x_train.shape)
+    # print("test samples shape:", x_test.shape)
+    #
+    # y_train = keras.utils.to_categorical(y_train, num_classes)
+    # y_test = keras.utils.to_categorical(y_test, num_classes)
+    #
+    # #
+    # trg_path = 'D:/graduation_project/SPATIAL_training/LSTM/'
+    # # mlp(x_train, y_train, x_test, y_test)
+    # specific_level_test(256, 64, x_train, y_train, x_test, y_test, save_model=True, trg_path=trg_path, loop=5)
+
+##############################  JTM InceptionV3-shared training ###############################
+    # train_path = root + train + '/JTM_InceptionV3_shared/10/fc1/'
+    # test_path = root + test + '/JTM_InceptionV3_shared/10/fc1/'
+    #
+    # x_train, y_train = load_data(train_path, read_loop=True, loop=2)
+    # x_test, y_test = load_data(test_path, read_loop=True, loop=2)
+    #
+    # print("train samples shape:", x_train.shape)
+    # print("test samples shape:", x_test.shape)
+    #
+    # y_train = keras.utils.to_categorical(y_train, num_classes)
+    # y_test = keras.utils.to_categorical(y_test, num_classes)
+    #
+    # #
+    # trg_path = 'D:/graduation_project/JTM_training/split1/InceptionV3/shared/'
+    # # mlp(x_train, y_train, x_test, y_test)
+    # specific_level_test(128, 64, x_train, y_train, x_test, y_test, save_model=True, trg_path=trg_path, loop=2)
+
+##############################  spatial training ###############################
+    # train_path = root + train + '/SPATIAL_InceptionV3/10/fc1/'
+    # test_path = root + test + '/SPATIAL_InceptionV3/10/fc1/'
+    # train_detail_path = root + train + '/spatial_10/detail/_frame_num.txt'
+    # test_detail_path = root + test + '/spatial_10/detail/_frame_num.txt'
+    #
+    # x_train, y_train, _ = load_spatial_data(train_path, train_detail_path, loop=1)
+    # x_test, y_test, detail = load_spatial_data(test_path, test_detail_path, loop=1)
+    # test_detail = detail
+    #
+    # print("train samples shape:", x_train.shape)
+    # print("test samples shape:", x_test.shape)
+    #
+    # y_train = keras.utils.to_categorical(y_train, num_classes)
+    # y_test = keras.utils.to_categorical(y_test, num_classes)
+    #
+    # #
+    # trg_path = 'D:/graduation_project/SPATIAL_training/InceptionV3/model/'
+    # # mlp(x_train, y_train, x_test, y_test)
+    # specific_level_test(128, 64, x_train, y_train, x_test, y_test, save_model=True, trg_path=trg_path, loop=1)
+
+##############################  spatial svm ###############################
+    train_path = root + train + '/SPATIAL_InceptionV3/10/fc1/'
+    test_path = root + test + '/SPATIAL_InceptionV3/10/fc1/'
     train_detail_path = root + train + '/spatial_10/detail/_frame_num.txt'
     test_detail_path = root + test + '/spatial_10/detail/_frame_num.txt'
 
-    x_train, y_train, _ = load_spatial_data(train_path, train_detail_path, loop=5)
-    x_test, y_test, detail = load_spatial_data(test_path, test_detail_path, loop=5)
+    x_train, y_train = tmp_load_data(train_path)
+    x_test, y_test, detail = load_spatial_data(test_path, test_detail_path, loop=1)
     test_detail = detail
+    x_test, y_test = tmp_load_data(test_path)
 
     print("train samples shape:", x_train.shape)
     print("test samples shape:", x_test.shape)
 
-    y_train = keras.utils.to_categorical(y_train, num_classes)
-    y_test = keras.utils.to_categorical(y_test, num_classes)
-
-    #
-    trg_path = 'D:/graduation_project/SPATIAL_training/LSTM/'
-    # mlp(x_train, y_train, x_test, y_test)
-    specific_level_test(256, 64, x_train, y_train, x_test, y_test, save_model=True, trg_path=trg_path, loop=5)
-
-
+    model = svc(x_train, y_train, x_test, y_test)
+    spatial_evaluate(model, x_test, y_test, 0, 0, 1)

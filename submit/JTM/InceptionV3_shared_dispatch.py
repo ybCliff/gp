@@ -4,9 +4,9 @@ import os
 # os.system(('python InceptionV3_shared.py --echo_begin=2 --echo_end=3 --first=0 --learning_rate=0.0001 --spe=4 --momentum=0.9 --model_name=e1_spe4_round2.h5'))
 #
 # os.system(('python Evaluate_InceptionV3_shared.py --model_name=e0_spe4_round2.h5'))
-os.system(('python Evaluate_InceptionV3_shared.py --model_name=e2_spe4_round2.h5'))
+# os.system(('python Evaluate_InceptionV3_shared.py --model_name=e2_spe4_round2.h5'))
 
-# os.system(('python generate_InceptionV3_fmap.py --model_name=e1_spe4_round2.h5 --layer=fc1'))
+os.system(('python generate_InceptionV3_fmap.py --model_name=e2_spe4_round2.h5 --layer=fc1'))
 # os.system(('python generate_InceptionV3_fmap.py --model_name=e1_spe4_round2.h5 --layer=fc2'))
 
 

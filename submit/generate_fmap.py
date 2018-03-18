@@ -1,4 +1,6 @@
 from keras.applications.vgg19 import VGG19
+from keras.applications.vgg16 import VGG16
+from keras.applications.inception_v3 import InceptionV3
 from keras.preprocessing import image
 from keras.applications.vgg19 import preprocess_input
 from keras.models import Model
@@ -52,16 +54,16 @@ def run(read_path, model, write_path, start):
         x = preprocess_input(x)
 
         features = model.predict(x)
-        if args.layer == 'block5_pool':
-            y = np.mean(features, axis=0)
-            if args.fusion == 'mean':
-                y = np.mean(y, axis=0)
-                y = np.mean(y, axis=0)
-            else:
-                y = np.max(y, axis=0)
-                y = np.max(y, axis=0)
+        # if args.layer == 'block5_pool':
+        y = np.mean(features, axis=0)
+        if args.fusion == 'mean':
+            y = np.mean(y, axis=0)
+            y = np.mean(y, axis=0)
         else:
-            y = features
+            y = np.max(y, axis=0)
+            y = np.max(y, axis=0)
+        # else:
+        #     y = features
 
         file_to_write.write(','.join(str(i) for i in y.tolist()))
         file_to_write.close()
@@ -88,7 +90,13 @@ if __name__ == '__main__':
     #         break
     #     time.sleep(10)
 
-    base_model = VGG19(weights='imagenet', include_top=args.top)
+    if args.model == 'vgg19':
+        base_model = VGG19(weights='imagenet', include_top=args.top)
+    elif args.model == 'InceptionV3':
+        base_model = InceptionV3(weights='imagenet', include_top=args.top)
+    elif args.model == 'vgg16':
+        base_model = VGG16(weights='imagenet', include_top=args.top)
+
     model = Model(inputs=base_model.input, outputs=base_model.get_layer(args.layer).output)
 
     if args.split1:
