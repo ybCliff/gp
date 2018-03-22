@@ -32,4 +32,21 @@ import time
 # os.system(  ('python generate_fmap.py --folder=JDM_mc/15 --split2=True --split3=True')  )
 
 
-os.system(  ('python generate_fmap.py --folder=spatial_10/frame --split1=True --model=vgg19 --layer=block4_pool')  )
+# os.system(  ('python generate_fmap.py --folder=JTM_ori/10 --split1=True --model=vgg19 --layer=block4_pool')  )
+# os.system(  ('python generate_fmap.py --folder=JTM_mc/10 --split1=True --model=vgg19 --layer=block4_pool')  )
+#
+# os.system(  ('python generate_fmap.py --folder=JTM_ori/10 --split1=True --model=vgg16 --layer=block5_pool')  )
+# os.system(  ('python generate_fmap.py --folder=JTM_mc/10 --split1=True --model=vgg16 --layer=block5_pool')  )
+#
+# os.system(  ('python generate_fmap.py --folder=JTM_ori/10 --split1=True --model=vgg16 --layer=block4_pool')  )
+# os.system(  ('python generate_fmap.py --folder=JTM_mc/10 --split1=True --model=vgg16 --layer=block4_pool')  )
+
+
+os.system(  ('python generate_fmap.py --folder=JDM_ori/10 --split1=True --model=vgg19 --layer=block4_pool')  )
+os.system(  ('python generate_fmap.py --folder=JDM_mc/10 --split1=True --model=vgg19 --layer=block4_pool')  )
+
+os.system(  ('python generate_fmap.py --folder=JDM_ori/10 --split1=True --model=vgg16 --layer=block5_pool')  )
+os.system(  ('python generate_fmap.py --folder=JDM_mc/10 --split1=True --model=vgg16 --layer=block5_pool')  )
+
+os.system(  ('python generate_fmap.py --folder=JDM_ori/10 --split1=True --model=vgg16 --layer=block4_pool')  )
+os.system(  ('python generate_fmap.py --folder=JDM_mc/10 --split1=True --model=vgg16 --layer=block4_pool')  )

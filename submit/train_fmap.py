@@ -166,7 +166,7 @@ def load_spatial_data(path, detail_path, loop):
     print('Count:', count)
     return np.array(x), np.array(y), detail
 
-def alternate_load_data(path1, path2):
+def alternate_load_data(path1, path2, loop):
     if not os.path.exists(path1) or not os.path.exists(path2):
         exit(100)
     file_list = os.listdir(path1)
@@ -194,7 +194,7 @@ def alternate_load_data(path1, path2):
         content = [float(i) for i in content.split(',')]
         myset2.append(content)
 
-        if count % loop_num == 0:
+        if count % loop == 0:
             tmpy = file.split('.')[0].split('_')[2]
             x.append(np.append(myset1, myset2, axis=0))
             y.append(int(tmpy) - 1)
@@ -204,7 +204,7 @@ def alternate_load_data(path1, path2):
     return np.array(x), np.array(y)
 
 
-def mean_max_load(path1, path2):
+def mean_max_load(path1, path2, loop):
     if not os.path.exists(path1) or not os.path.exists(path2):
         exit(100)
     file_list = os.listdir(path1)
@@ -231,7 +231,7 @@ def mean_max_load(path1, path2):
 
         myset1.append(np.max(tmp, axis=0))
 
-        if count % loop_num == 0:
+        if count % loop == 0:
             tmpy = file.split('.')[0].split('_')[2]
             x.append(myset1)
             y.append(int(tmpy) - 1)
@@ -459,13 +459,18 @@ def spatial_evaluate(model, x, y, level1, level2, loop, pre=0, write_csv=False, 
 
 
 
-def specific_level_test(level1, level2, x_train, y_train, x_test, y_test, loop, save_model=True, trg_path='D:/graduation_project/JTM_training/model/'):
-    drop = 0.4
+def specific_level_test(level1, level2, x_train, y_train, x_test, y_test, loop, save_model=True, trg_path='D:/graduation_project/JTM_training/model/', level3=-1):
+    drop = 0.1
     if not os.path.exists(trg_path):
         os.makedirs(trg_path)
     model = Sequential()
-    model.add(LSTM(level1, input_shape=(loop * 2 if alternate else loop, 1024), return_sequences=True, dropout=drop))
-    model.add(LSTM(level2, dropout=drop))
+    model.add(LSTM(level1, input_shape=(loop * 2 if alternate else loop, 512), return_sequences=True, dropout=drop))
+    if level3 != -1:
+        model.add(LSTM(level2, dropout=drop, return_sequences=True))
+    else:
+        model.add(LSTM(level2, dropout=drop))
+    if level3 != -1:
+        model.add(LSTM(level3, dropout=drop))
     model.add(Dense(num_classes, activation='softmax'))
 
     model.compile(loss='categorical_crossentropy',
@@ -480,9 +485,9 @@ def specific_level_test(level1, level2, x_train, y_train, x_test, y_test, loop, 
                   epochs=1,
                   validation_data=(x_test, y_test),
                   verbose=2)
-        if history.history['val_acc'][0] > 0.56:
-            # tmp = evaluate2(model, x_test, y_test, spatial_num=10, level1=level1, level2=level2, pre=pre_best, loop=loop, trg_path=trg_path, write_csv=False)
-            tmp = spatial_evaluate(model, x_test, y_test, level1, level2, pre=pre_best, loop=loop, trg_path=trg_path, write_csv=False)
+        if history.history['val_acc'][0] > 0.24:
+            tmp = evaluate2(model, x_test, y_test, spatial_num=10, level1=level1, level2=level2, pre=pre_best, loop=loop, trg_path=trg_path, write_csv=False)
+            # tmp = spatial_evaluate(model, x_test, y_test, level1, level2, pre=pre_best, loop=loop, trg_path=trg_path, write_csv=False)
             if tmp > pre_best:
                 pre_best = tmp
                 if save_model:
@@ -615,26 +620,33 @@ if __name__ == '__main__':
     # specific_level_test(256, 64, x_train, y_train, x_test, y_test, save_model=True, trg_path=trg_path, loop=5)
 
 ##############################  JTM InceptionV3-shared training ###############################
-    # train_path = root + train + '/JTM_InceptionV3_shared/10/fc1/'
-    # test_path = root + test + '/JTM_InceptionV3_shared/10/fc1/'
+    # train_path = root + train + '/JDM_InceptionV3_shared/10/fc1/'
+    # test_path = root + test + '/JDM_InceptionV3_shared/10/fc1/'
     #
-    # x_train, y_train = load_data(train_path, read_loop=True, loop=2)
-    # x_test, y_test = load_data(test_path, read_loop=True, loop=2)
+    # x_train, y_train = load_data(train_path, read_loop=True, loop=1)
+    # x_test, y_test = load_data(test_path, read_loop=True, loop=1)
+
+    train_mc_path = root + train + '/JDM_mc/10/vgg19_block5_pool_mean/'
+    train_ori_path = root + train + '/JDM_ori/10/vgg19_block5_pool_mean/'
+    test_mc_path = root + test + '/JDM_mc/10/vgg19_block5_pool_mean/'
+    test_ori_path = root + test + '/JDM_ori/10/vgg19_block5_pool_mean/'
+    x_train, y_train = mean_max_load(train_mc_path, train_ori_path, loop=1)
+    x_test, y_test = mean_max_load(test_mc_path, test_ori_path, loop=1)
+
+    print("train samples shape:", x_train.shape)
+    print("test samples shape:", x_test.shape)
+
+    y_train = keras.utils.to_categorical(y_train, num_classes)
+    y_test = keras.utils.to_categorical(y_test, num_classes)
+
     #
-    # print("train samples shape:", x_train.shape)
-    # print("test samples shape:", x_test.shape)
-    #
-    # y_train = keras.utils.to_categorical(y_train, num_classes)
-    # y_test = keras.utils.to_categorical(y_test, num_classes)
-    #
-    # #
-    # trg_path = 'D:/graduation_project/JTM_training/split1/InceptionV3/shared/'
-    # # mlp(x_train, y_train, x_test, y_test)
-    # specific_level_test(128, 64, x_train, y_train, x_test, y_test, save_model=True, trg_path=trg_path, loop=2)
+    trg_path = 'D:/graduation_project/JTM_training/split1/InceptionV3/shared/'
+    # mlp(x_train, y_train, x_test, y_test)
+    specific_level_test(128, 64, x_train, y_train, x_test, y_test, save_model=False, trg_path=trg_path, loop=1)
 
 ##############################  spatial training ###############################
-    # train_path = root + train + '/SPATIAL_InceptionV3/10/fc1/'
-    # test_path = root + test + '/SPATIAL_InceptionV3/10/fc1/'
+    # train_path = root + train + '/spatial_10/frame/vgg16_block4_pool_mean/'
+    # test_path = root + test + '/spatial_10/frame/vgg16_block4_pool_mean/'
     # train_detail_path = root + train + '/spatial_10/detail/_frame_num.txt'
     # test_detail_path = root + test + '/spatial_10/detail/_frame_num.txt'
     #
@@ -651,21 +663,21 @@ if __name__ == '__main__':
     # #
     # trg_path = 'D:/graduation_project/SPATIAL_training/InceptionV3/model/'
     # # mlp(x_train, y_train, x_test, y_test)
-    # specific_level_test(128, 64, x_train, y_train, x_test, y_test, save_model=True, trg_path=trg_path, loop=1)
+    # specific_level_test(128, 64, x_train, y_train, x_test, y_test, save_model=False, trg_path=trg_path, loop=1)
 
 ##############################  spatial svm ###############################
-    train_path = root + train + '/SPATIAL_InceptionV3/10/fc1/'
-    test_path = root + test + '/SPATIAL_InceptionV3/10/fc1/'
-    train_detail_path = root + train + '/spatial_10/detail/_frame_num.txt'
-    test_detail_path = root + test + '/spatial_10/detail/_frame_num.txt'
-
-    x_train, y_train = tmp_load_data(train_path)
-    x_test, y_test, detail = load_spatial_data(test_path, test_detail_path, loop=1)
-    test_detail = detail
-    x_test, y_test = tmp_load_data(test_path)
-
-    print("train samples shape:", x_train.shape)
-    print("test samples shape:", x_test.shape)
-
-    model = svc(x_train, y_train, x_test, y_test)
-    spatial_evaluate(model, x_test, y_test, 0, 0, 1)
+    # train_path = root + train + '/SPATIAL_InceptionV3/10/fc1/'
+    # test_path = root + test + '/SPATIAL_InceptionV3/10/fc1/'
+    # train_detail_path = root + train + '/spatial_10/detail/_frame_num.txt'
+    # test_detail_path = root + test + '/spatial_10/detail/_frame_num.txt'
+    #
+    # x_train, y_train = tmp_load_data(train_path)
+    # x_test, y_test, detail = load_spatial_data(test_path, test_detail_path, loop=1)
+    # test_detail = detail
+    # x_test, y_test = tmp_load_data(test_path)
+    #
+    # print("train samples shape:", x_train.shape)
+    # print("test samples shape:", x_test.shape)
+    #
+    # model = svc(x_train, y_train, x_test, y_test)
+    # spatial_evaluate(model, x_test, y_test, 0, 0, 1)
