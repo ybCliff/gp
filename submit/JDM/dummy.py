@@ -26,6 +26,10 @@ img = cv2.resize(img, (224, 224))
 
 print(cal_simi_hist_gray(img, img))
 
+tmp = [1, 1, 1, 2, 2]
+print(tmp-0.5)
+print(tmp.count(False))
+
 # print(img.shape)
 # print(cv2.resize(img, (240, 180)).shape)
 # base_model = VGG19(weights='imagenet', include_top=False)
@@ -36,8 +40,6 @@ print(cal_simi_hist_gray(img, img))
 # img = np.expand_dims(img, 0)
 # out = model.predict(img)
 # print(out.shape)
-
-cal_simi_hist_gray
 
 
 #
