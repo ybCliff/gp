@@ -3,21 +3,101 @@ import os, cv2
 import random, time
 from matplotlib import pyplot as plt
 root = "D:/graduation_project/workspace/dataset/HMDB51/"
-avg_split_num = 11
-loop_num = 15
+loop_num = 10
+level = 25
+avg_split_num = level + 1
 
-jetMap = np.array([
-[0,0,0.66667],
-[0,0,1],
-[0,0.33333,1],
-[0,0.66667,1],
-[0,1,1],
-[0.33333,1,0.66667],
-[0.66667,1,0.33333],
-[1,1,0],
-[1,0.66667,0],
-[1,0.33333,0]
-])
+if level == 5:
+    jetMap = np.array([
+        [0, 0.5, 1],
+        [0, 1, 1],
+        [0.5, 1, 0.5],
+        [1, 1, 0],
+        [1, 0.5, 0]
+    ])
+elif level == 10:
+    jetMap = np.array([
+    [0,0,0.66667],
+    [0,0,1],
+    [0,0.33333,1],
+    [0,0.66667,1],
+    [0,1,1],
+    [0.33333,1,0.66667],
+    [0.66667,1,0.33333],
+    [1,1,0],
+    [1,0.66667,0],
+    [1,0.33333,0]
+    ])
+elif level == 15:
+    jetMap = np.array([
+    [0,0,0.75],
+    [0,0,1],
+    [0,0.25,1],
+    [0,0.5,1],
+    [0,0.75,1],
+    [0,1,1],
+    [0.25,1,0.75],
+    [0.5,1,0.5],
+    [0.75,1,0.25],
+    [1,1,0],
+    [1,0.75,0],
+    [1,0.5,0],
+    [1,0.25,0],
+    [1,0,0],
+    [0.75,0,0]
+    ])
+elif level == 20:
+    jetMap = np.array([
+        [0, 0, 0.6],
+        [0, 0, 0.8],
+        [0, 0, 1],
+        [0, 0.2, 1],
+        [0, 0.4, 1],
+        [0, 0.6, 1],
+        [0, 0.8, 1],
+        [0, 1, 1],
+        [0.2, 1, 0.8],
+        [0.4, 1, 0.6],
+        [0.6, 1, 0.4],
+        [0.8, 1, 0.2],
+        [1, 1, 0],
+        [1, 0.8, 0],
+        [1, 0.6, 0],
+        [1, 0.4, 0],
+        [1, 0.2, 0],
+        [1, 0, 0],
+        [0.8, 0, 0],
+        [0.6, 0, 0]
+    ])
+elif level == 25:
+    jetMap = np.array([
+        [0, 0, 0.71429],
+        [0, 0, 0.85714],
+        [0, 0, 1],
+        [0, 0.14286, 1],
+        [0, 0.28571, 1],
+        [0, 0.42857, 1],
+        [0, 0.57143, 1],
+        [0, 0.71429, 1],
+        [0, 0.85714, 1],
+        [0, 1, 1],
+        [0.14286, 1, 0.85714],
+        [0.28571, 1, 0.71429],
+        [0.42857, 1, 0.57143],
+        [0.57143, 1, 0.42857],
+        [0.71429, 1, 0.28571],
+        [0.85714, 1, 0.14286],
+        [1, 1, 0],
+        [1, 0.85714, 0],
+        [1, 0.71429, 0],
+        [1, 0.57143, 0],
+        [1, 0.42857, 0],
+        [1, 0.28571, 0],
+        [1, 0.14286, 0],
+        [1, 0, 0],
+        [0.85714, 0, 0]
+    ])
+
 jetMap *= 255
 jetMap = jetMap.astype(np.int64)
 print(jetMap)
@@ -66,10 +146,11 @@ def draw(x, y, read_video_name, op=-1):
 def display(x, y, id, type, JTM_path, read_video_name):
     w = x.shape[0]
     arr = np.array([i for i in range(w)])
-    split = np.array_split(arr, avg_split_num)
+    avg = min([avg_split_num, w])
+    split = np.array_split(arr, avg)
     for k in range  (loop_num):
         lst = []
-        for i in range(avg_split_num):
+        for i in range(avg):
             lst.append(random.sample(split[i].tolist(), 1)[0])
 
         img = draw(x[lst], y[lst], read_video_name)
@@ -82,11 +163,11 @@ def run(scope, jud_ori):
     if jud_ori:
         x_path = root + scope + '/ori_x/'
         y_path = root + scope + '/ori_y/'
-        JTM_path = root + scope + '/JTM_ori/' + str(loop_num) + '/'
+        JTM_path = root + scope + '/JTM_ori/' + str(loop_num) + '_' + str(level) + '/'
     else:
         x_path = root + scope + '/ori_x_mc/'
         y_path = root + scope + '/ori_y_mc/'
-        JTM_path = root + scope + '/JTM_mc/' + str(loop_num) + '/'
+        JTM_path = root + scope + '/JTM_mc/' + str(loop_num) + '_' + str(level) + '/'
     if not os.path.exists(JTM_path):
         os.makedirs(JTM_path)
     filelist = os.listdir(x_path)
@@ -102,13 +183,13 @@ def run(scope, jud_ori):
         y = load_data(y_path + fn)
         display(x, y, tmp[0], tmp[1], JTM_path, read_video_name)
 
-run("train2", True)
-run("train2", False)
-run("test2", True)
-run("test2", False)
+run("train1", True)
+run("train1", False)
+run("test1", True)
+run("test1", False)
 
-run("train3", True)
-run("train3", False)
-run("test3", True)
-run("test3", False)
+# run("train3", True)
+# run("train3", False)
+# run("test3", True)
+# run("test3", False)
 

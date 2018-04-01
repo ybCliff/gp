@@ -216,13 +216,16 @@ class CocoPoseLMDB(RNGDataFlow):
             mpl.use('Agg')
         import matplotlib.pyplot as plt
 
+
         fig = plt.figure()
         a = fig.add_subplot(2, 2, 1)
         a.set_title('Image')
+        a.set_xlabel('(a)')
         plt.imshow(CocoPoseLMDB.get_bgimg(inp))
 
         a = fig.add_subplot(2, 2, 2)
         a.set_title('Heatmap')
+        a.set_xlabel('(b)')
         plt.imshow(CocoPoseLMDB.get_bgimg(inp, target_size=(heatmap.shape[1], heatmap.shape[0])), alpha=0.5)
         tmp = np.amax(heatmap, axis=2)
         plt.imshow(tmp, cmap=plt.cm.gray, alpha=0.5)
@@ -232,14 +235,17 @@ class CocoPoseLMDB(RNGDataFlow):
         tmp2_odd = np.amax(np.absolute(tmp2[::2, :, :]), axis=0)
         tmp2_even = np.amax(np.absolute(tmp2[1::2, :, :]), axis=0)
 
+
         a = fig.add_subplot(2, 2, 3)
         a.set_title('Vectormap-x')
+        a.set_xlabel('(c)')
         plt.imshow(CocoPoseLMDB.get_bgimg(inp, target_size=(vectmap.shape[1], vectmap.shape[0])), alpha=0.5)
         plt.imshow(tmp2_odd, cmap=plt.cm.gray, alpha=0.5)
         plt.colorbar()
 
         a = fig.add_subplot(2, 2, 4)
         a.set_title('Vectormap-y')
+        a.set_xlabel('(d)')
         plt.imshow(CocoPoseLMDB.get_bgimg(inp, target_size=(vectmap.shape[1], vectmap.shape[0])), alpha=0.5)
         plt.imshow(tmp2_even, cmap=plt.cm.gray, alpha=0.5)
         plt.colorbar()

@@ -24,7 +24,8 @@ config.gpu_options.allow_growth = True
 if __name__ == '__main__':
     test_time = time.time()
     parser = argparse.ArgumentParser(description='Tensorflow Openpose Inference')
-    parser.add_argument('--imgpath', type=str, default='./images/p2.jpg')
+    # parser.add_argument('--imgpath', type=str, default='./images/p2.jpg')
+    parser.add_argument('--imgpath', type=str, default="D:/graduation_project/workspace/dataset/HMDB51/train1/spatial_10/frame/3198_2_27.jpg")
     parser.add_argument('--input-width', type=int, default=368)
     parser.add_argument('--input-height', type=int, default=368)
     parser.add_argument('--stage-level', type=int, default=6)
@@ -104,25 +105,25 @@ if __name__ == '__main__':
         logging.info('pose- elapsed_time={}'.format(time.time() - a))
 
         logging.info('image={} heatMap={} pafMat={}'.format(image.shape, heatMat.shape, pafMat.shape))
-        process_img = CocoPoseLMDB.display_image(image, heatMat, pafMat, as_numpy=True)
+        process_img = CocoPoseLMDB.display_image(image, heatMat, pafMat, as_numpy=False)
 
         # display
-        image = cv2.imread(args.imgpath)
-        image_h, image_w = image.shape[:2]
-        image = draw_humans(image, humans)
-
-        scale = 560.0 / image_h
-        newh, neww = 560, int(scale * image_w + 0.5)
-
-        image = cv2.resize(image, (neww, newh), interpolation=cv2.INTER_AREA)
-
-        convas = np.zeros([560, 640 + neww, 3], dtype=np.uint8)
-        convas[:, :640] = process_img
-        convas[:, 640:] = image
-
-        cv2.imshow('result', convas)
-        cv2.waitKey(0)
-
-        tf.train.write_graph(sess.graph_def, '.', 'graph-tmp.pb', as_text=True)
-
-        print('total time: ', time.time() - test_time)
+        # image = cv2.imread(args.imgpath)
+        # image_h, image_w = image.shape[:2]
+        # image = draw_humans(image, humans)
+        #
+        # scale = 480.0 / image_h
+        # newh, neww = 480, int(scale * image_w + 0.5)
+        #
+        # image = cv2.resize(image, (neww, newh), interpolation=cv2.INTER_AREA)
+        #
+        # convas = np.zeros([480, 640 + neww, 3], dtype=np.uint8)
+        # convas[:, :640] = process_img
+        # convas[:, 640:] = image
+        #
+        # cv2.imshow('result', convas)
+        # cv2.waitKey(0)
+        # #
+        # # tf.train.write_graph(sess.graph_def, '.', 'graph-tmp.pb', as_text=True)
+        #
+        # print('total time: ', time.time() - test_time)

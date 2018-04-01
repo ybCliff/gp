@@ -11,7 +11,8 @@ fig = plt.figure()
 def subplot(fig, sub, frame, title, x=320, y=240):
     ax = fig.add_subplot(sub)
     plt.imshow(frame)
-    ax.set_xlabel(title)
+    ax.set_xlabel("(e)")
+    ax.set_title(title)
     # ax.set_xlim([1, x])
     # ax.set_ylim([1, y])
 
@@ -29,12 +30,20 @@ def subplot(fig, sub, frame, title, x=320, y=240):
 # subplot(fig, 235, frame5, '(e) push', x=224, y = 224)
 # subplot(fig, 236, frame6, '(f) sword exercise', x=224, y = 224)
 
+# root = 'D:/graduation_project/gp/paper_img/'
+# frame1 = plt.imread(root + 'ori4.png') #
+# frame2 = plt.imread(root + 'mc4.png') #
+#
+#
+# subplot(fig, 121, frame1, '(a) situp -- original')
+# subplot(fig, 122, frame2, '(b) situp -- interpolation')
+#
+# plt.show()
+
+
 root = 'D:/graduation_project/gp/paper_img/'
-frame1 = plt.imread(root + 'ori4.png') #
-frame2 = plt.imread(root + 'mc4.png') #
+frame1 = plt.imread("D:/graduation_project/gp/paper_img/211_0.png") #
 
-
-subplot(fig, 121, frame1, '(a) situp -- original')
-subplot(fig, 122, frame2, '(b) situp -- interpolation')
+subplot(fig, 111, frame1, 'Processed Image')
 
 plt.show()
